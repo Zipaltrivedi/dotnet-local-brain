@@ -164,6 +164,7 @@ def scrape_stackoverflow(
     config: Optional[SovereignConfig] = None,
     max_records: int = 50000,
     min_score: int = 5,
+    min_answer_score: int = 3,
 ) -> list[DotNetRecord]:
     """Stream StackOverflow C# posts from HuggingFace and convert to records.
 
@@ -173,6 +174,9 @@ def scrape_stackoverflow(
         Maximum number of records to extract (default 50K to keep manageable).
     min_score : int
         Minimum question score to include.
+    min_answer_score : int
+        Minimum answer score for non-accepted answers. Accepted answers
+        (green tick) are always kept regardless of score.
     """
     from datasets import load_dataset
 
@@ -221,9 +225,14 @@ def scrape_stackoverflow(
             parent_id = row.get("ParentId", 0)
             if parent_id in questions:
                 existing = answers.get(parent_id)
-                # Keep the accepted answer, or the highest-scored one
                 q = questions[parent_id]
                 is_accepted = (row.get("Id") == q.get("accepted_answer_id"))
+
+                # Accept: green-tick answers always, others only if score >= threshold
+                if not is_accepted and score < min_answer_score:
+                    continue
+
+                # Keep accepted answer, or upgrade to higher-scored answer
                 if existing is None or is_accepted or score > existing.get("score", 0):
                     answers[parent_id] = {
                         "body": row.get("Body", "") or "",

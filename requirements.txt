@@ -1,0 +1,41 @@
+# Sovereign Shell - Core Dependencies
+# Install: pip install -r requirements.txt
+#
+# NOTE: llama-cpp-python requires CUDA Toolkit + CMake for GPU support.
+# To build with CUDA (recommended for GPU inference):
+#   set CMAKE_ARGS=-DGGML_CUDA=ON
+#   set FORCE_CMAKE=1
+#   pip install llama-cpp-python --no-binary llama-cpp-python
+#
+# For CPU-only (no CUDA needed):
+#   pip install llama-cpp-python
+
+# LLM inference engine (Phi-4 GGUF)
+llama-cpp-python>=0.3.16
+
+# Web scraping
+crawl4ai>=0.8.0
+playwright>=1.58.0
+beautifulsoup4>=4.14.0
+lxml>=5.3
+
+# CLI framework
+typer>=0.23.0
+rich>=14.0.0
+click>=8.3.0
+shellingham>=1.5.0
+
+# Data validation
+pydantic>=2.12.0
+
+# Vector database
+sqlite-vec>=0.1.6
+
+# HTTP client (used by crawl4ai and future API calls)
+httpx>=0.28.0
+
+# --- Optional: Fine-tuning (install separately) ---
+# pip install transformers peft bitsandbytes trl datasets accelerate
+
+# --- Optional: Development ---
+# pip install pytest

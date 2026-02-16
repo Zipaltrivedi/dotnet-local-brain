@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=70.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sovereign-shell"
+version = "0.1.0"
+description = "Local C# Master AI Coding Agent - Fine-tune Phi-4 into a C#/.NET specialist"
+requires-python = ">=3.12"
+license = {text = "MIT"}
+dependencies = [
+    "llama-cpp-python",
+    "crawl4ai",
+    "typer[all]",
+    "pydantic>=2.0",
+    "sqlite-vec",
+    "rich",
+]
+
+[project.optional-dependencies]
+train = [
+    "transformers",
+    "peft",
+    "bitsandbytes",
+    "trl",
+    "datasets",
+    "accelerate",
+]
+dev = [
+    "pytest",
+    "httpx",
+]
+
+[project.scripts]
+sovereign = "sovereign_shell.cli:app"
+
+[tool.setuptools.packages.find]
+include = ["sovereign_shell*"]

@@ -1,0 +1,43 @@
+# Model files (too large for git)
+*.gguf
+*.bin
+*.safetensors
+*.pt
+*.pth
+
+# Python virtual environment
+localprogrammingmodel/
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Data directories (generated, not source)
+data/raw_html/
+data/extracted/
+data/training/
+data/sovereign_shell.db
+
+# Validation temp projects
+validation_projects/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+Thumbs.db
+.DS_Store
+
+# .NET build artifacts
+bin/
+obj/
+*.user
+*.suo

@@ -116,6 +116,7 @@ async def crawl_category(
     deep_strategy = BFSDeepCrawlStrategy(
         max_depth=cfg.crawl_depth,
         include_external=False,
+        max_pages=page_limit,
     )
 
     browser_config = BrowserConfig(headless=True)

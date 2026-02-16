@@ -127,64 +127,130 @@ def status():
 # sovereign scrape
 # ---------------------------------------------------------------------------
 
+VALID_SOURCES = ["all", "mslearn", "stackoverflow", "github", "thestack", "devblogs", "hf-instruct"]
+
+
+def _store_records(records: list, cfg) -> None:
+    """Save records to JSON, DB, and knowledge graph."""
+    from sovereign_shell.memory.graph_builder import build_graph_from_records
+    from sovereign_shell.memory.graphdb import GraphDB
+    from sovereign_shell.memory.vectordb import VectorDB
+    from sovereign_shell.scraper.sentinel import save_extracted_records
+
+    if not records:
+        console.print("\n[yellow]No records extracted.[/]\n")
+        return
+
+    # Save to JSON (backup)
+    output = save_extracted_records(records, cfg)
+    console.print(f"[green]Extracted {len(records)} records -> {output.name}[/]")
+
+    # Save to database
+    console.print("[dim]Inserting into database...[/]")
+    db = VectorDB(cfg)
+    inserted = db.insert_batch(records)
+    console.print(f"[green]{inserted} records inserted into DB[/]")
+
+    # Build knowledge graph
+    console.print("[dim]Building knowledge graph...[/]")
+    graph = GraphDB(cfg)
+    graph_result = build_graph_from_records(records, graph)
+    console.print(
+        f"[green]Graph: {graph_result['seed_nodes']} seed nodes, "
+        f"{graph_result['feature_nodes']} features, "
+        f"{graph_result['seed_edges'] + graph_result['feature_edges']} edges[/]"
+    )
+
+    db.close()
+    graph.close()
+    console.print(f"\n[bold green]Done! {len(records)} records scraped and stored.[/]\n")
+
+
 @app.command()
 def scrape(
-    category: Optional[str] = typer.Option(None, "--category", "-c", help="Single category to scrape (e.g. 'language', 'blazor')"),
-    max_pages: Optional[int] = typer.Option(None, "--max-pages", "-m", help="Max pages per category"),
+    source: str = typer.Option("all", "--source", "-s", help=f"Data source: {', '.join(VALID_SOURCES)}"),
+    category: Optional[str] = typer.Option(None, "--category", "-c", help="Single category (for mslearn source)"),
+    max_pages: Optional[int] = typer.Option(None, "--max-pages", "-m", help="Max pages/records per source"),
 ):
-    """Run the Sentinel scraper pipeline to harvest .NET documentation."""
-    from sovereign_shell.memory.graph_builder import build_graph_from_records
-    from sovereign_shell.memory.vectordb import VectorDB
+    """Scrape C# data from multiple sources (mslearn, stackoverflow, github, etc.)."""
     from sovereign_shell.models.schemas import Category
-    from sovereign_shell.scraper.sentinel import crawl_all, crawl_category, save_extracted_records
 
     logging.basicConfig(level=logging.INFO, format="%(name)s | %(message)s")
-
     cfg = get_config()
     cfg.raw_html_dir.mkdir(parents=True, exist_ok=True)
 
-    if category:
-        try:
-            cat = Category(category.lower())
-        except ValueError:
-            console.print(f"[red]Unknown category: {category}[/]")
-            console.print(f"Valid: {', '.join(c.value for c in Category)}")
-            raise typer.Exit(1)
+    if source not in VALID_SOURCES:
+        console.print(f"[red]Unknown source: {source}[/]")
+        console.print(f"Valid sources: {', '.join(VALID_SOURCES)}")
+        raise typer.Exit(1)
 
-        console.print(f"\n[bold]Scraping category: {cat.value}[/]\n")
-        records = asyncio.run(crawl_category(cat, cfg, max_pages))
-    else:
-        console.print("\n[bold]Scraping all categories[/]\n")
-        cats = list(Category) if category is None else None
-        records = asyncio.run(crawl_all(cfg, cats))
+    all_records = []
 
-    if records:
-        # Save to JSON (backup)
-        output = save_extracted_records(records, cfg)
-        console.print(f"[green]Extracted {len(records)} records -> {output.name}[/]")
+    # --- Microsoft Learn ---
+    if source in ("all", "mslearn"):
+        from sovereign_shell.scraper.sentinel import crawl_all, crawl_category
+        console.print("\n[bold]Source: Microsoft Learn[/]\n")
 
-        # Save to database
-        console.print("[dim]Inserting into database...[/]")
-        db = VectorDB(cfg)
-        inserted = db.insert_batch(records)
-        console.print(f"[green]{inserted} records inserted into DB[/]")
+        if category:
+            try:
+                cat = Category(category.lower())
+            except ValueError:
+                console.print(f"[red]Unknown category: {category}[/]")
+                raise typer.Exit(1)
+            records = asyncio.run(crawl_category(cat, cfg, max_pages))
+        else:
+            records = asyncio.run(crawl_all(cfg))
 
-        # Build knowledge graph
-        console.print("[dim]Building knowledge graph...[/]")
-        from sovereign_shell.memory.graphdb import GraphDB
-        graph = GraphDB(cfg)
-        graph_result = build_graph_from_records(records, graph)
-        console.print(
-            f"[green]Graph: {graph_result['seed_nodes']} seed nodes, "
-            f"{graph_result['feature_nodes']} features, "
-            f"{graph_result['seed_edges'] + graph_result['feature_edges']} edges[/]"
-        )
+        console.print(f"  Microsoft Learn: {len(records)} records")
+        all_records.extend(records)
 
-        db.close()
-        graph.close()
-        console.print(f"\n[bold green]Done! {len(records)} records scraped and stored.[/]\n")
-    else:
-        console.print("\n[yellow]No records extracted.[/]\n")
+    # --- StackOverflow ---
+    if source in ("all", "stackoverflow"):
+        from sovereign_shell.scraper.stackoverflow import scrape_stackoverflow
+        console.print("\n[bold]Source: StackOverflow[/]\n")
+        limit = max_pages or 50000
+        records = scrape_stackoverflow(cfg, max_records=limit)
+        console.print(f"  StackOverflow: {len(records)} records")
+        all_records.extend(records)
+
+    # --- DevBlogs ---
+    if source in ("all", "devblogs"):
+        from sovereign_shell.scraper.devblogs import scrape_devblogs
+        console.print("\n[bold]Source: DevBlogs[/]\n")
+        limit = max_pages or 0  # 0 = all articles
+        records = asyncio.run(scrape_devblogs(cfg, max_articles=limit))
+        console.print(f"  DevBlogs: {len(records)} records")
+        all_records.extend(records)
+
+    # --- GitHub Repos ---
+    if source in ("all", "github"):
+        from sovereign_shell.scraper.github_repos import scrape_github_repos
+        console.print("\n[bold]Source: GitHub Repos (dotnet/*)[/]\n")
+        limit = max_pages or 500
+        records = scrape_github_repos(cfg, max_files_per_repo=limit)
+        console.print(f"  GitHub Repos: {len(records)} records")
+        all_records.extend(records)
+
+    # --- HuggingFace Instruction Datasets ---
+    if source in ("all", "hf-instruct"):
+        from sovereign_shell.scraper.hf_datasets import scrape_hf_datasets
+        console.print("\n[bold]Source: HuggingFace Instruction Datasets[/]\n")
+        limit = max_pages or 30000
+        records = scrape_hf_datasets(cfg, max_records=limit)
+        console.print(f"  HF Instruction: {len(records)} records")
+        all_records.extend(records)
+
+    # --- The Stack v2 ---
+    if source in ("all", "thestack"):
+        from sovereign_shell.scraper.the_stack import scrape_the_stack
+        console.print("\n[bold]Source: The Stack v2 (C# code)[/]\n")
+        limit = max_pages or 50000
+        records = scrape_the_stack(cfg, max_records=limit)
+        console.print(f"  The Stack: {len(records)} records")
+        all_records.extend(records)
+
+    # Store all records
+    _store_records(all_records, cfg)
 
 
 # ---------------------------------------------------------------------------

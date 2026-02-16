@@ -34,6 +34,13 @@ sqlite-vec>=0.1.6
 # HTTP client (used by crawl4ai and future API calls)
 httpx>=0.28.0
 
+# HuggingFace datasets (StackOverflow, The Stack, instruction datasets)
+datasets>=4.0.0
+huggingface_hub>=0.20.0
+
+# RSS/sitemap parsing (DevBlogs)
+feedparser>=6.0.0
+
 # --- Optional: Fine-tuning (install separately) ---
 # pip install transformers peft bitsandbytes trl datasets accelerate
 

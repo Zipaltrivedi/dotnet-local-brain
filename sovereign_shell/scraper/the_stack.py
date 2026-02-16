@@ -116,17 +116,17 @@ def _extract_feature_name(content: str) -> str:
 def scrape_the_stack(
     config: Optional[SovereignConfig] = None,
     max_records: int = 50000,
-    dataset_name: str = "bigcode/the-stack-v2-dedup",
+    dataset_name: str = "bigcode/the-stack-dedup",
 ) -> list[DotNetRecord]:
-    """Stream C# files from The Stack v2 and create records.
+    """Stream C# files from The Stack and create records.
 
     Parameters
     ----------
     max_records : int
         Maximum records to extract.
     dataset_name : str
-        HuggingFace dataset name. Use "bigcode/the-stack-dedup" for v1
-        if v2 requires auth you haven't set up.
+        HuggingFace dataset name. Default is v1 dedup which includes
+        source content. v2-dedup is metadata-only (no content column).
     """
     from datasets import load_dataset
 
@@ -137,17 +137,22 @@ def scrape_the_stack(
     processed = 0
     skipped = 0
 
+    # Dataset-specific C# partition paths
+    _DATA_DIRS = {
+        "bigcode/the-stack-dedup": "data/c-sharp",
+        "bigcode/the-stack-v2-dedup": "data/C-Sharp",
+        "bigcode/starcoderdata": "csharp",
+    }
+    data_dir = _DATA_DIRS.get(dataset_name)
+
     try:
-        # Try loading with C# language filter
-        ds = load_dataset(
-            dataset_name,
-            split="train",
-            streaming=True,
-            data_dir="data/c-sharp",  # v1 style filter
-        )
+        kwargs = {"split": "train", "streaming": True}
+        if data_dir:
+            kwargs["data_dir"] = data_dir
+        ds = load_dataset(dataset_name, **kwargs)
     except Exception:
         try:
-            # v2 style — filter column
+            # Fallback: no data_dir filter
             ds = load_dataset(dataset_name, split="train", streaming=True)
         except Exception:
             logger.exception("Failed to load %s. Make sure you're logged in: huggingface-cli login", dataset_name)

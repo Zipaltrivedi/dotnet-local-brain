@@ -1,5 +1,6 @@
 """Central configuration for Sovereign Shell."""
 
+import os
 from pathlib import Path
 from pydantic import BaseModel
 
@@ -9,6 +10,7 @@ class SovereignConfig(BaseModel):
 
     # Paths
     project_root: Path = Path(r"C:\C#LocalModel")
+    secrets_dir: Path = Path(r"C:\C#LocalModel\secrets")
     model_path: Path = Path(r"C:\C#LocalModel\phi-4-Q4_K_M.gguf")
     db_path: Path = Path(r"C:\C#LocalModel\data\sovereign_shell.db")
     coverage_path: Path = Path(r"C:\C#LocalModel\data\coverage_matrix.json")
@@ -38,4 +40,15 @@ class SovereignConfig(BaseModel):
 
 def get_config() -> SovereignConfig:
     """Return the default configuration."""
-    return SovereignConfig()
+    cfg = SovereignConfig()
+    _load_secrets(cfg)
+    return cfg
+
+
+def _load_secrets(cfg: SovereignConfig) -> None:
+    """Load API tokens from secrets/ into environment variables."""
+    hf_token_file = cfg.secrets_dir / "hf_token.txt"
+    if hf_token_file.exists() and not os.environ.get("HF_TOKEN"):
+        token = hf_token_file.read_text().strip()
+        if token:
+            os.environ["HF_TOKEN"] = token

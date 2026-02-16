@@ -33,6 +33,9 @@ validation_projects/
 *.swp
 *.swo
 
+# Secrets (API tokens, credentials)
+secrets/
+
 # OS
 Thumbs.db
 .DS_Store

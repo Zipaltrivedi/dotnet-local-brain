@@ -21,6 +21,7 @@ build/
 data/raw_html/
 data/extracted/
 data/training/
+data/repos/
 data/sovereign_shell.db
 
 # Validation temp projects

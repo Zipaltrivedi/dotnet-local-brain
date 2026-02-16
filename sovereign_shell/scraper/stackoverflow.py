@@ -78,9 +78,18 @@ def _strip_html(html: str) -> str:
     return re.sub(r"<[^>]+>", "", html).strip()
 
 
+def _tags_to_str(tags) -> str:
+    """Normalize tags to a space-separated string."""
+    if isinstance(tags, list):
+        return " ".join(str(t).lower() for t in tags)
+    if isinstance(tags, str):
+        return tags.lower().replace("<", " ").replace(">", " ")
+    return ""
+
+
 def _detect_category(tags: str) -> Category:
     """Detect category from StackOverflow tags."""
-    tag_list = tags.lower().replace("<", " ").replace(">", " ").split()
+    tag_list = tags.split()
     for tag in tag_list:
         if tag in _TAG_CATEGORY_MAP:
             return _TAG_CATEGORY_MAP[tag]
@@ -147,7 +156,7 @@ def _make_record_from_qa(
         nuget_packages=[],
         source_url=f"https://stackoverflow.com/questions/{post_id}",
         validation_status=ValidationStatus.UNTESTED,
-        tags=[t for t in tags.replace("<", " ").replace(">", " ").split() if t],
+        tags=[t for t in tags.split() if t],
     )
 
 
@@ -186,36 +195,38 @@ def scrape_stackoverflow(
         if len(records) >= max_records:
             break
 
-        tags = row.get("tags", "") or ""
+        # Dataset uses capitalized column names; Tags is a list[str]
+        raw_tags = row.get("Tags") or []
+        tags = _tags_to_str(raw_tags)
 
         # Filter: must have C# tag
-        if "<c#>" not in tags.lower():
+        if "c#" not in tags:
             continue
 
-        post_type = row.get("post_type_id", 0)
-        score = row.get("score", 0) or 0
+        post_type = row.get("PostTypeId", 0)
+        score = row.get("Score", 0) or 0
 
         if post_type == 1:  # Question
             if score >= min_score:
-                post_id = row.get("id", 0)
+                post_id = row.get("Id", 0)
                 questions[post_id] = {
-                    "title": row.get("title", ""),
-                    "body": row.get("body", ""),
+                    "title": row.get("Title", "") or "",
+                    "body": row.get("Body", "") or "",
                     "tags": tags,
                     "score": score,
-                    "accepted_answer_id": row.get("accepted_answer_id"),
+                    "accepted_answer_id": row.get("AcceptedAnswerId"),
                 }
 
         elif post_type == 2:  # Answer
-            parent_id = row.get("parent_id", 0)
+            parent_id = row.get("ParentId", 0)
             if parent_id in questions:
                 existing = answers.get(parent_id)
                 # Keep the accepted answer, or the highest-scored one
                 q = questions[parent_id]
-                is_accepted = (row.get("id") == q.get("accepted_answer_id"))
+                is_accepted = (row.get("Id") == q.get("accepted_answer_id"))
                 if existing is None or is_accepted or score > existing.get("score", 0):
                     answers[parent_id] = {
-                        "body": row.get("body", ""),
+                        "body": row.get("Body", "") or "",
                         "score": score,
                         "is_accepted": is_accepted,
                     }

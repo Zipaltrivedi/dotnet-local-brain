@@ -21,8 +21,6 @@ from sovereign_shell.models.schemas import (
     DotNetVersion,
     ValidationStatus,
 )
-from sovereign_shell.scraper.parser import extract_features_from_text
-
 logger = logging.getLogger(__name__)
 
 # Repos to clone with their category mapping
@@ -177,6 +175,7 @@ def scrape_github_repos(
                             continue
 
                         summary = _extract_proposal_summary(content)
+                        from sovereign_shell.scraper.parser import extract_features_from_text
                         extraction = extract_features_from_text(
                             text=summary,
                             category=Category.LANGUAGE,

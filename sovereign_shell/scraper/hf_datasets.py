@@ -54,7 +54,11 @@ def scrape_stack_exchange_instruction(
     records: list[DotNetRecord] = []
 
     try:
-        ds = load_dataset("ArmelR/stack-exchange-instruction", split="train", streaming=True)
+        try:
+            ds = load_dataset("ArmelR/stack-exchange-instruction", split="train", streaming=True)
+        except ValueError:
+            # Some datasets only have 'test' split
+            ds = load_dataset("ArmelR/stack-exchange-instruction", split="test", streaming=True)
     except Exception:
         logger.exception("Failed to load ArmelR/stack-exchange-instruction")
         return records

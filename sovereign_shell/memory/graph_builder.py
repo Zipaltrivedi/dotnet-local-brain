@@ -260,13 +260,18 @@ def build_graph_from_records(
     # Step 1: Seed foundational nodes
     seed_result = seed_graph(graph)
 
-    # Step 2: Add each record
+    # Step 2: Add each record (batch mode — commit every 500 records)
+    graph._batch_mode = True
     total_edges = 0
     for i, record in enumerate(records):
         edges = add_record_to_graph(record, graph)
         total_edges += edges
-        if (i + 1) % 100 == 0:
+        if (i + 1) % 5000 == 0:
+            graph.conn.commit()
+        if (i + 1) % 5000 == 0:
             logger.info("Added %d/%d records to graph", i + 1, len(records))
+    graph.conn.commit()
+    graph._batch_mode = False
 
     result = {
         "seed_nodes": seed_result["nodes_added"],

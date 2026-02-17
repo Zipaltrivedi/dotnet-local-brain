@@ -208,7 +208,7 @@ def scrape(
     if source in ("all", "stackoverflow"):
         from sovereign_shell.scraper.stackoverflow import scrape_stackoverflow
         console.print("\n[bold]Source: StackOverflow[/]\n")
-        limit = max_pages or 50000
+        limit = max_pages or 0  # 0 = unlimited
         records = scrape_stackoverflow(cfg, max_records=limit)
         console.print(f"  StackOverflow: {len(records)} records")
         all_records.extend(records)
@@ -226,7 +226,7 @@ def scrape(
     if source in ("all", "github"):
         from sovereign_shell.scraper.github_repos import scrape_github_repos
         console.print("\n[bold]Source: GitHub Repos (dotnet/*)[/]\n")
-        limit = max_pages or 500
+        limit = max_pages or 0  # 0 = unlimited
         records = scrape_github_repos(cfg, max_files_per_repo=limit)
         console.print(f"  GitHub Repos: {len(records)} records")
         all_records.extend(records)
@@ -235,7 +235,7 @@ def scrape(
     if source in ("all", "hf-instruct"):
         from sovereign_shell.scraper.hf_datasets import scrape_hf_datasets
         console.print("\n[bold]Source: HuggingFace Instruction Datasets[/]\n")
-        limit = max_pages or 30000
+        limit = max_pages or 0  # 0 = unlimited
         records = scrape_hf_datasets(cfg, max_records=limit)
         console.print(f"  HF Instruction: {len(records)} records")
         all_records.extend(records)
@@ -244,7 +244,7 @@ def scrape(
     if source in ("all", "thestack"):
         from sovereign_shell.scraper.the_stack import scrape_the_stack
         console.print("\n[bold]Source: The Stack v2 (C# code)[/]\n")
-        limit = max_pages or 50000
+        limit = max_pages or 0  # 0 = unlimited
         records = scrape_the_stack(cfg, max_records=limit)
         console.print(f"  The Stack: {len(records)} records")
         all_records.extend(records)

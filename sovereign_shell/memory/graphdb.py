@@ -115,13 +115,16 @@ class GraphDB:
         self.config = config or get_config()
         self.config.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._conn: Optional[sqlite3.Connection] = None
+        self._batch_mode: bool = False
         self._ensure_schema()
 
     @property
     def conn(self) -> sqlite3.Connection:
         if self._conn is None:
-            self._conn = sqlite3.connect(str(self.config.db_path))
+            self._conn = sqlite3.connect(str(self.config.db_path), timeout=30)
             self._conn.row_factory = sqlite3.Row
+            self._conn.execute("PRAGMA journal_mode=WAL")
+            self._conn.execute("PRAGMA synchronous=NORMAL")
         return self._conn
 
     def _ensure_schema(self) -> None:
@@ -141,7 +144,8 @@ class GraphDB:
             "INSERT OR REPLACE INTO graph_nodes (id, node_type, name, properties) VALUES (?, ?, ?, ?)",
             (node.id, node.node_type, node.name, json.dumps(node.properties)),
         )
-        self.conn.commit()
+        if not self._batch_mode:
+            self.conn.commit()
 
     def add_nodes_batch(self, nodes: list[GraphNode]) -> int:
         """Insert multiple nodes. Returns count added."""
@@ -196,7 +200,8 @@ class GraphDB:
             "INSERT INTO graph_edges (source_id, target_id, relation, weight, properties) VALUES (?, ?, ?, ?, ?)",
             (edge.source_id, edge.target_id, edge.relation, edge.weight, json.dumps(edge.properties)),
         )
-        self.conn.commit()
+        if not self._batch_mode:
+            self.conn.commit()
 
     def add_edges_batch(self, edges: list[GraphEdge]) -> int:
         """Insert multiple edges. Returns count added."""

@@ -162,7 +162,7 @@ def _make_record_from_qa(
 
 def scrape_stackoverflow(
     config: Optional[SovereignConfig] = None,
-    max_records: int = 50000,
+    max_records: int = 0,
     min_score: int = 5,
     min_answer_score: int = 3,
 ) -> list[DotNetRecord]:
@@ -196,7 +196,7 @@ def scrape_stackoverflow(
         if processed % 100000 == 0:
             logger.info("Processed %d rows, found %d C# records so far...", processed, len(records))
 
-        if len(records) >= max_records:
+        if max_records > 0 and len(records) >= max_records:
             break
 
         # Dataset uses capitalized column names; Tags is a list[str]

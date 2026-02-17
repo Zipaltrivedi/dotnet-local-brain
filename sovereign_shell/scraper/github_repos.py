@@ -133,15 +133,15 @@ def _extract_proposal_summary(content: str) -> str:
 
 def scrape_github_repos(
     config: Optional[SovereignConfig] = None,
-    max_files_per_repo: int = 500,
-    include_tests: bool = False,
+    max_files_per_repo: int = 0,
+    include_tests: bool = True,
 ) -> list[DotNetRecord]:
     """Clone repos and extract features from .cs files.
 
     Parameters
     ----------
     max_files_per_repo : int
-        Maximum .cs files to process per repository.
+        Maximum .cs files to process per repository. 0 = unlimited.
     include_tests : bool
         Whether to include test files.
     """
@@ -165,7 +165,9 @@ def scrape_github_repos(
         if repo_name == "csharplang":
             proposals_dir = repo_dir / "proposals"
             if proposals_dir.exists():
-                md_files = list(proposals_dir.glob("**/*.md"))[:max_files_per_repo]
+                md_files = list(proposals_dir.glob("**/*.md"))
+                if max_files_per_repo > 0:
+                    md_files = md_files[:max_files_per_repo]
                 logger.info("Processing %d proposal files from csharplang", len(md_files))
 
                 for md_file in md_files:
@@ -203,8 +205,9 @@ def scrape_github_repos(
                 continue
             filtered.append(f)
 
-        # Limit
-        filtered = filtered[:max_files_per_repo]
+        # Limit (0 = unlimited)
+        if max_files_per_repo > 0:
+            filtered = filtered[:max_files_per_repo]
         logger.info("Processing %d files from %s (after filtering)", len(filtered), repo_name)
 
         for i, cs_file in enumerate(filtered):

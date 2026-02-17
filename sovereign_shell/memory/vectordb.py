@@ -90,8 +90,10 @@ class VectorDB:
     @property
     def conn(self) -> sqlite3.Connection:
         if self._conn is None:
-            self._conn = sqlite3.connect(str(self.config.db_path))
+            self._conn = sqlite3.connect(str(self.config.db_path), timeout=30)
             self._conn.row_factory = sqlite3.Row
+            self._conn.execute("PRAGMA journal_mode=WAL")
+            self._conn.execute("PRAGMA synchronous=NORMAL")
             self._conn.enable_load_extension(True)
             sqlite_vec.load(self._conn)
             self._conn.enable_load_extension(False)
@@ -141,12 +143,37 @@ class VectorDB:
     def insert_batch(self, records: list[DotNetRecord]) -> int:
         """Insert multiple records. Returns count of records inserted."""
         count = 0
-        for record in records:
+        for i, record in enumerate(records):
             try:
-                self.insert(record)
+                self.conn.execute(
+                    """INSERT OR REPLACE INTO records
+                    (id, category, csharp_version, dotnet_version, feature_name,
+                     description, code_snippet, legacy_equivalent, nuget_packages,
+                     source_url, validation_status, validation_target, validation_error, tags)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    (
+                        record.id,
+                        record.category.value,
+                        record.csharp_version.value,
+                        record.dotnet_version.value,
+                        record.feature_name,
+                        record.description,
+                        record.code_snippet,
+                        record.legacy_equivalent,
+                        json.dumps(record.nuget_packages),
+                        record.source_url,
+                        record.validation_status.value,
+                        record.validation_target,
+                        record.validation_error,
+                        json.dumps(record.tags),
+                    ),
+                )
                 count += 1
             except Exception:
                 logger.warning("Failed to insert record: %s", record.feature_name)
+            if (i + 1) % 5000 == 0:
+                self.conn.commit()
+        self.conn.commit()
         return count
 
     def get_by_id(self, record_id: str) -> Optional[DotNetRecord]:

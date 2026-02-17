@@ -40,7 +40,7 @@ def _is_csharp_content(text: str) -> bool:
 
 def scrape_stack_exchange_instruction(
     config: Optional[SovereignConfig] = None,
-    max_records: int = 30000,
+    max_records: int = 0,
 ) -> list[DotNetRecord]:
     """Stream ArmelR/stack-exchange-instruction and filter for C#.
 
@@ -69,7 +69,7 @@ def scrape_stack_exchange_instruction(
         if processed % 50000 == 0:
             logger.info("Processed %d rows, found %d C# records...", processed, len(records))
 
-        if len(records) >= max_records:
+        if max_records > 0 and len(records) >= max_records:
             break
 
         # Check if it's C# related
@@ -107,7 +107,7 @@ def scrape_stack_exchange_instruction(
 
 def scrape_stack_exchange_preferences(
     config: Optional[SovereignConfig] = None,
-    max_records: int = 10000,
+    max_records: int = 0,
 ) -> list[DotNetRecord]:
     """Stream HuggingFaceH4/stack-exchange-preferences for RLHF data."""
     from datasets import load_dataset
@@ -129,7 +129,7 @@ def scrape_stack_exchange_preferences(
         if processed % 50000 == 0:
             logger.info("Processed %d rows, found %d C# records...", processed, len(records))
 
-        if len(records) >= max_records:
+        if max_records > 0 and len(records) >= max_records:
             break
 
         question = row.get("question", "") or ""
@@ -171,15 +171,13 @@ def scrape_stack_exchange_preferences(
 
 def scrape_hf_datasets(
     config: Optional[SovereignConfig] = None,
-    max_records: int = 30000,
+    max_records: int = 0,
 ) -> list[DotNetRecord]:
-    """Scrape all HuggingFace instruction datasets."""
+    """Scrape all HuggingFace instruction datasets. 0 = unlimited."""
     records: list[DotNetRecord] = []
 
     records.extend(scrape_stack_exchange_instruction(config, max_records))
-    remaining = max_records - len(records)
-    if remaining > 0:
-        records.extend(scrape_stack_exchange_preferences(config, min(remaining, 10000)))
+    records.extend(scrape_stack_exchange_preferences(config, max_records))
 
     logger.info("HF Datasets total: %d C# records", len(records))
     return records

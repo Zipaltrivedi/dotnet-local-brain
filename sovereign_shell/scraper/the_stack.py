@@ -115,7 +115,7 @@ def _extract_feature_name(content: str) -> str:
 
 def scrape_the_stack(
     config: Optional[SovereignConfig] = None,
-    max_records: int = 50000,
+    max_records: int = 0,
     dataset_name: str = "bigcode/the-stack-dedup",
 ) -> list[DotNetRecord]:
     """Stream C# files from The Stack and create records.
@@ -167,7 +167,7 @@ def scrape_the_stack(
                 processed, len(records), skipped,
             )
 
-        if len(records) >= max_records:
+        if max_records > 0 and len(records) >= max_records:
             break
 
         # Filter for C# (v2 has a lang column)

@@ -14,20 +14,19 @@ import logging
 import math
 from typing import Optional
 
-from llama_cpp import Llama
-
 from sovereign_shell.config import SovereignConfig, get_config
 
 logger = logging.getLogger(__name__)
 
 # Module-level embedding model (separate from chat model to avoid reloading)
-_embed_llm: Optional[Llama] = None
+_embed_llm = None
 
 
-def _get_embed_model(config: Optional[SovereignConfig] = None) -> Llama:
+def _get_embed_model(config: Optional[SovereignConfig] = None):
     """Get or create the embedding model instance."""
     global _embed_llm
     if _embed_llm is None:
+        from llama_cpp import Llama
         cfg = config or get_config()
         _embed_llm = Llama(
             model_path=str(cfg.model_path),

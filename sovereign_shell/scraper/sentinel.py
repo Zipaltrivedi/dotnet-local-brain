@@ -21,7 +21,6 @@ from sovereign_shell.models.schemas import (
     ExtractedFeature,
     ValidationStatus,
 )
-from sovereign_shell.scraper.parser import extract_features_from_text
 from sovereign_shell.scraper.sources import get_seeds
 
 logger = logging.getLogger(__name__)
@@ -168,6 +167,7 @@ async def crawl_category(
                 _save_raw_html(cfg.raw_html_dir, category.value, url, markdown)
 
                 # Extract features via Phi-4
+                from sovereign_shell.scraper.parser import extract_features_from_text
                 extraction = extract_features_from_text(
                     text=markdown,
                     category=category,

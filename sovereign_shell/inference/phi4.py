@@ -12,8 +12,6 @@ from __future__ import annotations
 import os
 from typing import Optional
 
-from llama_cpp import Llama
-
 from sovereign_shell.config import SovereignConfig, get_config
 
 # Ensure CUDA DLLs are discoverable on Windows
@@ -30,7 +28,7 @@ class Phi4Engine:
 
     def __init__(self, config: SovereignConfig) -> None:
         self.config = config
-        self._llm: Optional[Llama] = None
+        self._llm = None
 
     @classmethod
     def get(cls, config: Optional[SovereignConfig] = None) -> Phi4Engine:
@@ -54,6 +52,7 @@ class Phi4Engine:
         """Load model into VRAM. Idempotent."""
         if self._llm is not None:
             return
+        from llama_cpp import Llama
         self._llm = Llama(
             model_path=str(self.config.model_path),
             n_ctx=self.config.n_ctx,
